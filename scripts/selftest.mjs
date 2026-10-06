@@ -114,7 +114,7 @@ check("no randomness that is not seeded", !/Math\.random/.test(src));
 console.log("\nthe words");
 const page = readFileSync(new URL("../public/index.html", import.meta.url), "utf8");
 const app = readFileSync(new URL("../public/app.js", import.meta.url), "utf8");
-check("no em dashes anywhere a visitor reads", ![page, app, src, JSON.stringify(r)].some((s) => s.includes("—")));
+check("no em dashes anywhere a visitor reads", ![page, app, src, JSON.stringify(r)].some((s) => s.includes("\u2014")));
 check("the page says the data is invented", /fictional/i.test(page) && /not a claim about any app/i.test(page));
 check("Harbour & Co is the operator", r.group === "Harbour & Co");
 
