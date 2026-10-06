@@ -1,0 +1,11 @@
+{
+  "name": "tasti-demo-delivery-recon",
+  "private": true,
+  "type": "module",
+  "version": "1.0.0",
+  "description": "Public demo: delivery-app payout statements checked against the POS and the bank.",
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "check": "node scripts/selftest.mjs"
+  }
+}

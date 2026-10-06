@@ -1,0 +1,6 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    { "name": "delivery-recon", "runtimeExecutable": "node", "runtimeArgs": ["scripts/dev.mjs"], "port": 3040 }
+  ]
+}

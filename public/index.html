@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Delivery reconciliation · a working demo by Tasti.io</title>
+<meta name="description" content="DoorDash, Uber Eats and SkipTheDishes payout statements checked against the POS and the bank, order by order.">
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  :root{
+    --ink:#1B1A18;--mid:#57534E;--faint:#8A857D;--rule:#E5E1D8;
+    --paper:#FFFFFF;--canvas:#F3F1EC;--teal:#0F8A7A;--warn:#B4541F;
+  }
+  body{font-family:'DM Sans',system-ui,sans-serif;background:var(--canvas);color:var(--ink);
+       padding:28px 16px 72px;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1120px;margin:0 auto}
+
+  .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.14em;
+           text-transform:uppercase;color:var(--teal);margin-bottom:9px}
+  h1{font-family:'DM Serif Display',Georgia,serif;font-size:clamp(27px,3.6vw,40px);line-height:1.12;margin-bottom:9px}
+  .sub{font-size:15px;line-height:23px;color:var(--mid);max-width:66ch}
+
+  .tabs{display:flex;gap:4px;margin:22px 0 0;border-bottom:1px solid var(--rule)}
+  .tab{appearance:none;background:none;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;
+       font:inherit;font-size:14px;font-weight:500;color:var(--faint);padding:9px 14px;cursor:pointer;border-radius:6px 6px 0 0}
+  .tab:hover{color:var(--ink)}
+  .tab.is-on{color:var(--ink);border-bottom-color:var(--teal)}
+  .tab:focus-visible{outline:2px solid var(--teal);outline-offset:-2px}
+
+  .sheet{background:var(--paper);border:1px solid var(--rule);border-radius:10px;overflow:hidden;margin-top:22px}
+  .sheet-head{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:baseline;
+              padding:17px 20px;border-bottom:1px solid var(--rule)}
+  .sheet-head h2{font-family:'DM Serif Display',Georgia,serif;font-size:19px;font-weight:400}
+  .stamp{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.08em;color:var(--faint)}
+
+  .headline{padding:17px 20px;border-bottom:1px solid var(--rule);font-size:15.5px;line-height:24px}
+  .headline b{font-weight:700}
+  .headline .flag{color:var(--warn)}
+
+  .tiles{display:grid;grid-template-columns:repeat(3,1fr);border-bottom:1px solid var(--rule)}
+  .tile{padding:14px 20px;border-right:1px solid var(--rule)}
+  .tile:last-child{border-right:0}
+  .tile span{display:block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);margin-bottom:4px}
+  .tile b{font-family:'DM Serif Display',Georgia,serif;font-size:24px;font-weight:400;color:var(--warn)}
+  .tile small{display:block;font-size:12.5px;color:var(--mid);margin-top:2px}
+
+  .find{padding:18px 20px;border-bottom:1px solid var(--rule)}
+  .find-top{display:flex;gap:10px 14px;align-items:baseline;justify-content:space-between;flex-wrap:wrap}
+  .find-name{font-weight:700;font-size:15.5px}
+  .find-money{font-family:'DM Serif Display',Georgia,serif;font-size:22px;color:var(--warn);white-space:nowrap}
+  .find-line{font-size:13.5px;color:var(--mid);margin-top:6px;line-height:21px;max-width:80ch}
+  .find-line b{color:var(--ink)}
+
+  .tablewrap{overflow-x:auto;margin-top:12px;border:1px solid var(--rule);border-radius:8px}
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;font-weight:500;
+     color:var(--faint);text-align:left;padding:8px 12px;border-bottom:1px solid var(--rule);white-space:nowrap;background:#FAF8F3}
+  td{padding:8px 12px;border-bottom:1px solid var(--rule);vertical-align:top}
+  tr:last-child td{border-bottom:0}
+  .num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .code{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--mid);white-space:nowrap}
+  .warn{color:var(--warn);font-weight:500}
+  .muted{color:var(--faint)}
+  tfoot td{font-weight:700;background:#FAF8F3}
+
+  .grid-wrap{padding:18px 20px;border-bottom:1px solid var(--rule)}
+  .grid-wrap h3,.aside h3{font-family:'DM Serif Display',Georgia,serif;font-size:17px;font-weight:400}
+  .grid-wrap p,.aside p{font-size:13px;color:var(--mid);margin-top:3px;line-height:20px}
+
+  .aside{padding:18px 20px;background:#FAFAF8}
+  .aside ul{list-style:none;margin-top:10px}
+  .aside li{display:flex;gap:10px;padding:8px 0;border-top:1px solid var(--rule);font-size:13.5px;line-height:20px;color:var(--mid)}
+  .aside li:first-child{border-top:0}
+  .kind{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.06em;text-transform:uppercase;
+        color:var(--faint);background:#EFEDE7;border-radius:999px;padding:2px 8px;white-space:nowrap;height:fit-content;margin-top:1px;align-self:flex-start}
+  .kind.doubt{background:#FDF0E8;color:var(--warn)}
+
+  .note{margin-top:18px;background:#FAF8F3;border:1px solid var(--rule);border-radius:9px;
+        padding:15px 18px;font-size:13.5px;line-height:21px;color:var(--mid)}
+  .note b{color:var(--ink)}
+  .loading{padding:44px 20px;text-align:center;color:var(--faint)}
+
+  .prose{background:var(--paper);border:1px solid var(--rule);border-radius:10px;padding:26px 30px 30px;margin-top:22px}
+  .prose h2{font-family:'DM Serif Display',Georgia,serif;font-size:21px;font-weight:400;margin:30px 0 9px}
+  .prose h2:first-child{margin-top:0}
+  .prose p{font-size:15px;line-height:25px;color:var(--mid);max-width:68ch;margin-bottom:11px}
+  .prose p b{color:var(--ink)}
+  .prose .cta a{font-family:'IBM Plex Mono',monospace;font-size:15px;color:var(--teal);text-decoration:none;
+                border-bottom:1px solid var(--teal)}
+
+  footer{margin-top:26px;font-size:13px;color:var(--faint);display:flex;flex-wrap:wrap;gap:6px 18px}
+  footer a{color:var(--teal);text-decoration:none;font-weight:500}
+
+  @media(max-width:760px){
+    .tiles{grid-template-columns:1fr}
+    .tile{border-right:0;border-bottom:1px solid var(--rule)}
+    .tile:last-child{border-bottom:0}
+    .hide-sm{display:none}
+    .prose{padding:20px 18px 24px}
+    .find,.grid-wrap,.aside,.headline,.sheet-head{padding-left:14px;padding-right:14px}
+    .aside li{flex-direction:column;gap:4px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="eyebrow">A working demo &middot; Tasti.io</div>
+  <h1>Where the delivery money went</h1>
+  <p class="sub">
+    DoorDash, Uber Eats and SkipTheDishes each send a payout statement. The point of sale knows what was
+    ordered, the bank knows what arrived, and nobody puts the three side by side. This does, order by
+    order, for four weeks of a fictional two-site group, and shows you every row behind every dollar.
+  </p>
+
+  <div class="tabs" role="tablist" aria-label="Sections">
+    <button class="tab is-on" role="tab" id="tab-check" aria-controls="panel-check" aria-selected="true">The check</button>
+    <button class="tab" role="tab" id="tab-how" aria-controls="panel-how" aria-selected="false" tabindex="-1">How it works</button>
+  </div>
+
+  <div id="panel-check" role="tabpanel" aria-labelledby="tab-check">
+    <div class="sheet" id="sheet"><div class="loading">Putting the three sources side by side</div></div>
+    <div class="note">
+      <b>About these numbers.</b> Sample data for a fictional group, invented to look like four ordinary
+      weeks, with a handful of problems planted on purpose. It is not a measurement of any restaurant and
+      not a claim about any app: a payout that is late or short usually has a mundane cause, such as a hold,
+      a reserve or a bank batching two days into one. The point is that somebody notices, the same week.
+    </div>
+  </div>
+
+  <div id="panel-how" role="tabpanel" aria-labelledby="tab-how" hidden>
+    <div class="prose">
+      <h2>Three sources that never meet</h2>
+      <p>
+        The point of sale knows every delivery order, because the tablet writes the app's order number
+        onto the ticket. Each app publishes a payout statement listing the orders it is paying for, what it
+        deducted, and what it is sending. The bank shows what actually landed. Each of those is correct on
+        its own terms, and none of them checks the others. That is the gap money falls into.
+      </p>
+
+      <h2>What gets matched to what</h2>
+      <p>
+        <b>Orders to tickets</b>, by the app's order number. An order on a statement with no ticket, or a
+        ticket naming an order no statement carries, is listed, not guessed at.
+      </p>
+      <p>
+        <b>Statements to themselves.</b> The orders on a statement are added up and compared with the
+        total it prints. The bank pays what the statement says, so a statement that is wrong about its own
+        orders is never caught by looking at the bank.
+      </p>
+      <p>
+        <b>Statements to deposits</b>, by app, location, amount and a date window. Exact amounts are matched
+        first, everywhere, so a short deposit cannot borrow the one that belongs to the payout next to it.
+        Only then is whatever is left paired up and the difference stated.
+      </p>
+
+      <h2>The three findings</h2>
+      <p>
+        <b>Commission kept on refunded orders.</b> When an order is refunded in full, the restaurant gives
+        back the whole price. If the commission on that order stayed deducted, the restaurant has paid for a
+        sale it did not keep. Whether it is recoverable depends on the agreement, which is exactly why each one is
+        listed with its order number, ready to raise.
+      </p>
+      <p>
+        <b>Payouts that did not arrive.</b> A statement was issued and no matching deposit landed within the
+        normal lag. Payouts still inside the lag are listed separately as in transit, because calling a
+        two day old payout missing would be crying wolf, and a page that cries wolf stops being read.
+      </p>
+      <p>
+        <b>Deposits short of their statement.</b> The money arrived, but not all of it.
+      </p>
+
+      <h2>Where a model works, and where it does not</h2>
+      <p>
+        Nowhere here. Every figure is a sum of rows you can see, made by ordinary code, and the same input
+        gives the same page every time. On a real account a model has exactly one job, the same as in the
+        <a href="https://invoices.tasti.io" style="color:var(--teal)">invoice reader</a>: turning a statement
+        that only exists as a PDF into rows. From the rows on, it is arithmetic.
+      </p>
+
+      <h2>What is real here and what is not</h2>
+      <p>
+        The data is invented, for a fictional group called Harbour &amp; Co, and so are its commission rates.
+        Statements are simplified to subtotal, tax, commission and refunds; real ones also carry marketing
+        fees, tax on fees and tips, which reconcile the same way with more columns. The matching rules, the
+        tolerances and the arithmetic are the real thing.
+      </p>
+
+      <h2>Where to start</h2>
+      <p>
+        With one question: <b>when did someone last tick a delivery app's payout against the bank, deposit
+        by deposit?</b> If the honest answer is "when the total looked off", the small ones have been going
+        through for a while. That is usually a twenty minute conversation.
+      </p>
+      <p class="cta"><a href="mailto:yuriy@tasti.io?subject=Delivery%20reconciliation">yuriy@tasti.io</a></p>
+
+      <h2>Who built it</h2>
+      <p>
+        Yuriy Romanyuk, in Vancouver. I ran restaurant operations before I built software for them, which
+        is why this checks three sources against each other instead of drawing a chart of one.
+      </p>
+    </div>
+  </div>
+
+  <footer>
+    <span>Built by Yuriy Romanyuk</span>
+    <a href="https://www.tasti.io">tasti.io</a>
+    <a href="https://demo.tasti.io">all demos</a>
+    <a href="mailto:yuriy@tasti.io">yuriy@tasti.io</a>
+  </footer>
+</div>
+
+<script type="module" src="/app.js"></script>
+</body>
+</html>
